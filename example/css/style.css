@@ -1,0 +1,21 @@
+/** sprite: mysprite;
+    sprite-image: url('mysprite.png');
+    sprite-margin: 30; 
+    sprite-dataurl: true;
+    sprite-layout: vertical; */
+
+.lighthouse {
+  display:block;
+  width: 64px;
+  height: 64px; 
+  background-image: url('../images/lighthouse.png');
+  /** sprite-ref: mysprite; */
+}
+
+.radiotower {
+  display:block;
+  width: 64px;
+  height: 64px; 
+  background-image: url('../images/radiotower.png'); 
+  /** sprite-ref: mysprite; */ 
+}
