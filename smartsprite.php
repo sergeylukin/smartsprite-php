@@ -103,7 +103,7 @@ class Smartsprite {
     IMAGETYPE_XBM=>'xbm'    //16=XBM
     );
 
-  function tsmartsprite($_filename='') {
+  function __construct($_filename='') {
 
     if ($this->verbose)
     echo "\nsmartsprite Version: $this->version\nAuthor: Alexander Kaupp 2008\nFor more information visit: http://www.tanila.de/smartsprite/\n\n";
