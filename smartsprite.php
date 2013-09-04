@@ -55,10 +55,6 @@ class Smartsprite {
   $verbose = true,
   // css-file to parse
   $_filename = '',
-  // the content of the original file
-  $_fileCntOrig = '',
-  // the content of the parsed file
-  $_fileCntParsed = '',
   // Folder to store temporary files (write access 4 the webserver)
   $_tmpFolder = '',
   // regExes 4 parsing
@@ -108,27 +104,24 @@ class Smartsprite {
     'absolutePathRoot'  => null,
     'relativePathRoot'  => null,
     'spritesBasePath'   => null
-  );
+  ),
 
-  function __construct($_filename='') {
+  // The main meat for our library - CSS that contains references to images 
+  // with Smartsprite commenting syntax
+  $input_css = '',
 
-    if ($this->verbose)
-    echo "\nsmartsprite Version: $this->version\nAuthor: Alexander Kaupp 2008\nFor more information visit: http://www.tanila.de/smartsprite/\n\n";
+  // Generated CSS with references to Image sprites
+  $output_css = '',
 
-    $this->chkGDVersion();
-    $this->setFilename($_filename);
+  // Array of generated sprites that contain:
+  //   - Filename (e.g. mysprite.png)
+  //   - Image contents (in either PNG, JPEG, etc. format) that is ready to be 
+  //     written to a file
+  $all_sprites = array();
 
-    $this->collectImageInfos();
-    $this->sortImagesByHeight();
-    $this->createSpriteImages();
-    
-    $this->writeParsedFile();
-    //$this->replaceBGIMGStrings();
-    if ($this->verbose)
-    echo "\nsmartsprite creation successful\n\nHave a nice day :)\n\n";
+  function __construct($css = '') {
 
-
-//print_r( $this->sprites );
+    $this->input_css = $this->output_css = $css;
 
   }
 
@@ -142,16 +135,36 @@ class Smartsprite {
     return $this->config[$key] = $value;
   }
 
-function setFilename($_filename,$tmppath=''){
+  function crunch() {
+    if ($this->verbose)
+    echo "\nsmartsprite Version: $this->version\nAuthor: Alexander Kaupp 2008\nFor more information visit: http://www.tanila.de/smartsprite/\n\n";
 
-  if (empty($_filename) ) die ("Error: No css-file specified!\n\n");
-  if (!file_exists($_filename)) die("Error: File: $_filename not found!\n\n");
-  $this->_filename = $_filename;
-//  $this->_outfile = rtrim($_filename,'.css').$this->_fileprefix;
-  $this->_outfile = basename($_filename,".css").$this->_fileprefix;
-  $this->_outfilestripped = rtrim($this->_filename,'.css').$this->_filestrippedprefix;
-  $this->readFileContent();
-} // setFilename
+    $this->chkGDVersion();
+
+    if ( empty($this->input_css) ) die("The css has no content! \n\n");
+    if( !$this->parseSpriteDefs() ) {
+      return false;
+    }
+
+    $this->collectImageInfos();
+    $this->sortImagesByHeight();
+    $this->createSpriteImages();
+    
+    //$this->replaceBGIMGStrings();
+    if ($this->verbose)
+    echo "\nsmartsprite creation successful\n\nHave a nice day :)\n\n";
+
+    return true;
+  }
+
+  function getCSS() {
+    return $this->output_css;
+  }
+
+  function getSprites() {
+    return $this->all_sprites;
+  }
+
 
 function chkGDVersion(){
   $gdInfo = @gd_info();
@@ -162,25 +175,6 @@ function chkGDVersion(){
   } else die ( "ERROR: no GD Library found.\n" );
 }
 
-function getFilename(){
-  return $this->_filename;
-}
-
-function readFileContent(){
-  $_fn = $this->getFilename();
-  if (is_readable($_fn)) {
-    if($this->verbose) echo "Reading File: $_fn ... \n";
-  } else die("ERROR: Can not read File $_fn please check file permissions!");
-
-  // setting original file contetnt
-  $this->_fileCntOrig = file_get_contents  ( $_fn );
-  // copy original file parsed file content
-  $this->_fileCntParsed = $this->_fileCntOrig;
-
-  if ( empty($this->_fileCntOrig) ) die("The css-file: .$_fn has no content! \n\n");
-  $this->parseSpriteDefs();
-}
-
 // finds the sprite definition:
 // Example:
 // /** sprite: mysprite;
@@ -189,7 +183,7 @@ function readFileContent(){
 //   sprite-layout: horizontal */
 function parseSpriteDefs(){
   if ($this->verbose)
-  echo "\nParsing file: $this->_filename \n\n";
+  echo "\nParsing css\n\n";
   $this->_spriteDefs = array();
   $_matches = '';
   $_starttag = '\/\*\*\s+';
@@ -198,7 +192,7 @@ function parseSpriteDefs(){
   $_regExSpriteDef = '/'.$_starttag.'sprite\s*:.*;'.$_spritetag.$_spritetag.$_spritetag.$_endtag.'/i';
 
 
-  $_cnt = $this->_fileCntOrig;
+  $_cnt = $this->input_css;
   preg_match_all($_regExSpriteDef,$_cnt,$_matches);
 
   $_i=0;
@@ -210,8 +204,12 @@ function parseSpriteDefs(){
     $_i++;
   }
 
-  if (!$this->_spriteDefs) die("ERROR: No sprite Definition found in $this->_filename or syntax error! \n Nothing to do for me!\n\n");
+  if (!$this->_spriteDefs) {
+    return false;
+  }
+
   $this->parseSpriteProperties();
+  return true;
 }
 function bool2String($x) {
   return (is_bool($x) ? ($x ? "true":"false"):$x);
@@ -225,9 +223,9 @@ function parseSpriteProperties(){
     $_spritename = $this->parseString($this->regExSpriteName ,$spritedef);
 
     if (!empty($_spritename))
-      $url= trim($this->parseString($this->regExSpriteUrl ,$spritedef),'\'\""');
-      $this->sprites[$_spritename]['url']   = $url;
-      $this->sprites[$_spritename]['filename'] = $this->sprites[$_spritename]['url'];
+      $spritename = trim($this->parseString($this->regExSpriteUrl ,$spritedef),'\'\""');
+      $this->sprites[$_spritename]['url']   = $this->spritesBasePath . DIRECTORY_SEPARATOR . $spritename;
+      $this->sprites[$_spritename]['filename'] = $spritename;
       $this->sprites[$_spritename]['imagetype'] = $this->getFileExtToImgType($this->sprites[$_spritename]['filename']);
       $this->sprites[$_spritename]['layout']  = $this->parseString($this->regExSpriteLayout ,$spritedef);
       $this->sprites[$_spritename]['margin'] = $this->parseString($this->refExSpriteMargin ,$spritedef);
@@ -283,7 +281,7 @@ function parseSpriteProperties(){
       echo "DataURL:\t$_sdataURL\n";
       echo "\n\n";
     }
-    $this->sprites[$_spritename]['images'] = $this->collectSpriteImgRefs($_spritename,$this->_fileCntOrig);
+    $this->sprites[$_spritename]['images'] = $this->collectSpriteImgRefs($_spritename,$this->input_css);
   }
 }
 
@@ -335,7 +333,7 @@ function collectSpriteImgRefs($_ssRefName,$_str){
 function getCssSelectorsOfSpriteRef($_ssRefName) {
   $_matches = '';
 
-  $_str = $this->_fileCntOrig;
+  $_str = $this->input_css;
 
   $_starttag = '\/\*\*\s+';
   $_endtag = '\s*\*\/';
@@ -382,7 +380,12 @@ function collectImageInfos(){
     foreach( $imgdefs as $spriteimagekey => $spriteimagevalue ){
       if ($this->verbose)
       echo "Fetching Image-File Properties for file : $spriteimagekey\t";
-      $fullfilename = dirname($this->_filename).'/'.$spriteimagekey;
+      if( substr($spriteimagekey, 0, 3) === '../' ) {
+        $path_prefix = $this->relativePathRoot;
+      } else {
+        $path_prefix = $this->absolutePathRoot;
+      }
+      $fullfilename = realpath($path_prefix . DIRECTORY_SEPARATOR . $spriteimagekey);
 //      die($fullfilename);
       if (file_exists($fullfilename) ) {
         list($width, $height, $type) = getimagesize($fullfilename );
@@ -432,21 +435,10 @@ function replaceBGIMGStrings() {
          $_bgpostr .= 'background-repeat: '.$_imglocationvalue['repeat'].';';
       }
       $_repl = $_bgpostr;
-      $this->_fileCntParsed = str_replace($_imglocationvalue['replace_string'], $_repl, $this->_fileCntParsed);
+      $this->output_css = str_replace($_imglocationvalue['replace_string'], $_repl, $this->output_css);
     } // image loop
     } // if images
   } // Sprite-Loop
-}
-
-function writeParsedFile() {
-    if ($this->verbose)
-    echo "Writing smartsprite css file...\n";
-    $filename =$this->_outfile;
-    $filename = dirname($this->_filename).'/'.$filename;
-    $handle = @fopen($filename, "w");
-    if (!$handle) die("ERROR: Can not write to: $filename");
-    fwrite ($handle, $this->_fileCntParsed);
-    fclose($handle);
 }
 
 function sortImagesByHeight() {
@@ -626,7 +618,21 @@ function createSpriteImages() {
               imagecopy($image,$subimg,$imagevalue['spritepos_left'],$imagevalue['spritepos_top'],0,0,$imagevalue['width'],$imagevalue['height']);
         }
       } // image loop
-      $this->safeImageToFile($image, $this->sprites[$spritekey]['imagetype'], $this->sprites[$spritekey]['filename'], $spritekey, $OPTIMIZE, $DATAURL ); 
+
+      $imgtype = $this->sprites[$spritekey]['imagetype'];
+      $filename = $this->sprites[$spritekey]['filename'];
+      $filepath = $this->spritesBasePath . DIRECTORY_SEPARATOR . $filename;
+      $sprite = $this->returnImage($image, $imgtype);
+
+      // Add sprite to the array of sprites
+      array_push($this->all_sprites, array(
+        'filename'  => $filename,
+        'image'     => $sprite['image']
+      ));
+      // Replace BG reference in Output CSS
+      // $this->safeImageToFile($image, $this->sprites[$spritekey]['imagetype'], $this->sprites[$spritekey]['filename'], $spritekey, $OPTIMIZE, $DATAURL ); 
+      $this->updateCSS($sprite['image'], $spritekey, $filepath, $sprite['mime'], $DATAURL);
+
     } // if images exists
   } // Sprite loop
 }
@@ -644,7 +650,12 @@ function getFileExtToImgType($_fileName) {
 function loadImageFromFile($imageInfo) {
   $_result = 0;
   $filelocation = $imageInfo['file_location'];
-  $filelocation = dirname($this->_filename).'/'.$filelocation;
+  if( substr($filelocation, 0, 3) === '../' ) {
+    $path_prefix = $this->relativePathRoot;
+  } else {
+    $path_prefix = $this->absolutePathRoot;
+  }
+  $filelocation = realpath($path_prefix . DIRECTORY_SEPARATOR . $filelocation);
 
   switch ($imageInfo['type']) {
     case 1 : $_result = @imagecreatefromgif($filelocation);
@@ -670,82 +681,85 @@ function loadImageFromFile($imageInfo) {
   return $_result;
 }
 
-function safeImageToFile($imgres, $imgtype, $filename, $spritekey, $optimize, $dataurl) {
-  $filename = dirname($this->_filename).'/'.$filename;
-  //if ($this->verbose)
-
-  echo "Writing smartsprite file: $filename  colors: $this->_maxColors  ...\n";
-
+function returnImage($imgres, $imgtype) {
   $_result = 0;
+  ob_start();
   switch ($imgtype) {
     case 1 :
-      $_result = @imagegif($imgres, $filename);
+      @imagegif($imgres);
       $_mime = 'image/gif';
       break;
     case 2 :
-      $_result = @imagejpeg($imgres, $filename);
+      @imagejpeg($imgres);
       $_mime = 'image/jpeg';
       break;
     case 3 :
-       $_result = @imagepng($imgres, $filename);
-       $_mime = 'image/png';
+      @imagepng($imgres);
+      $_mime = 'image/png';
       break;
     default:
-      $_result = @imagegif($imgres, $filename);
+      @imagegif($imgres);
       $_mime = 'image/gif';
   }
+  $_result = ob_get_contents();
+  ob_end_clean();
   ImageDestroy($imgres);
 
-  if (!$_result) die("ERROR: Can not write smartsprite file to: $filename\n");
+  if (!$_result) die("ERROR: Can not parse sprite image\n");
+  return array('image'  => $_result,
+               'mime'   => $_mime);
+
+  // if ($optimize == true ) {
+  //   
+  //   // todo: file existance chk
+  //   require_once(dirname(dirname(__FILE__)).'/tanilaimgmin/class.tanilaimgmin.php');
+  //     
+  //   $tanilaimgmin = new tanilaimgmin($filename);
+  //   $_optIMG = $tanilaimgmin->getResultFilename();
+
+  //     switch ($this->getFileExtToImgType($_optIMG)) {
+  //       case 1 :
+  //       $_mime = 'image/gif';
+  //         break;
+  //       case 2 :
+  //         $_mime = 'image/jpeg';
+  //         break;
+  //       case 3 :
+  //          $_mime = 'image/png';
+  //         break;
+  //       default:
+  //         $_mime = 'image/gif';
+  //     }
+
+  // } else { // optimize
+  //   $_optIMG = $filename; 
+  // }
 
   // call tanilaimgmin
+  }
 
-if ($optimize == true ) {
-  
-  // todo: file existance chk
-  require_once(dirname(dirname(__FILE__)).'/tanilaimgmin/class.tanilaimgmin.php');
-    
-  $tanilaimgmin = &new tanilaimgmin($filename);
-  $_optIMG = $tanilaimgmin->getResultFilename();
-
-    switch ($this->getFileExtToImgType($_optIMG)) {
-      case 1 :
-      $_mime = 'image/gif';
-        break;
-      case 2 :
-        $_mime = 'image/jpeg';
-        break;
-      case 3 :
-         $_mime = 'image/png';
-        break;
-      default:
-        $_mime = 'image/gif';
-    }
-
-} else { // optimize
-  $_optIMG = $filename; 
-}
+  function updateCSS($image, $spritekey, $filepath, $mime, $dataurl) {
     
     $_spriteDef = $this->_spriteDefs[0];
     array_splice($this->_spriteDefs,0,1);
     
     $_replacement = ($dataurl) 
-      ? $this->getImageDataURL($_optIMG, $_mime, $spritekey) 
-      : $this->getImageJointBG($_optIMG, $spritekey);//'';
+      ? $this->getImageDataURL($image, $filepath, $mime, $spritekey) 
+      : $this->getImageJointBG($filepath, $spritekey);//'';
     
-    $this->_fileCntParsed = str_replace($_spriteDef, $_replacement, $this->_fileCntParsed);
+    $this->output_css = str_replace($_spriteDef, $_replacement, $this->output_css);
     $this->replaceBGIMGStrings();
-}
+  }
 // creates a joint css-rule for all matching css-rules with 
 // dataURL_background-sprite and a hack of IE:
-function getImageDataURL($file, $_mime, $spritekey) {
+function getImageDataURL($image, $filepath, $_mime, $spritekey) {
   // todo spriterefname = spriteimg name
   // only set file extension in sprite def
   //$_fileExt = end(explode(".", basename($file) ));
   //$_fileNoExt = str_replace('.'.$_fileExt,'',basename( $file ) );
-  $_data = $this->getBase64EncodedImgString($file);
+  $_data = base64_encode($image);
   $_selectors = $this->sprites[$spritekey]['cssselectors'];
-  $_IEHack = "\n".'*background: url("'.basename( $file ).'") no-repeat;'."\n";
+  $_IEHack = "\n".'*background: url("'.$filepath.'") no-repeat;'."\n";
   return $_selectors.'{background: url("data:'.$_mime.';base64,'.$_data .'") no-repeat; '.$_IEHack.'}' ;
 }
 // creates a joint css-rule for all matching css-rules with the same
@@ -755,11 +769,6 @@ function getImageJointBG($file, $spritekey) {
   //$_fileNoExt = str_replace('.'.$_fileExt,'', basename($file) );
   $_selectors = $this->sprites[$spritekey]['cssselectors'];
   return $_selectors.' {background: url("'.$file.'") no-repeat;}' ;
-}
-
-function getBase64EncodedImgString($file) {
-  $contents = file_get_contents($file);
-  return base64_encode($contents);
 }
 
 } // class tsmartsprite
