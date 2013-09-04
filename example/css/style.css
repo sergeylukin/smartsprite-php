@@ -1,7 +1,7 @@
 /** sprite: mysprite;
     sprite-image: url('mysprite.png');
     sprite-margin: 30; 
-    sprite-dataurl: true;
+    sprite-dataurl: false;
     sprite-layout: vertical; */
 
 .lighthouse {
