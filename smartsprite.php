@@ -101,7 +101,14 @@ class Smartsprite {
     IMAGETYPE_IFF=>'aiff',    //14=IFF
     IMAGETYPE_WBMP=>'wbmp',   //15=WBMP
     IMAGETYPE_XBM=>'xbm'    //16=XBM
-    );
+    ),
+
+  // Default configuration variables
+  $config = array(
+    'absolutePathRoot'  => null,
+    'relativePathRoot'  => null,
+    'spritesBasePath'   => null
+  );
 
   function __construct($_filename='') {
 
@@ -123,7 +130,17 @@ class Smartsprite {
 
 //print_r( $this->sprites );
 
-  } // tsmartsprite
+  }
+
+  // Getter and Setter
+  // Used to configure
+  function __get($key) {
+    if( isset($this->config[$key]) ) return $this->config[$key];
+    return null;
+  }
+  function __set($key, $value) {
+    return $this->config[$key] = $value;
+  }
 
 function setFilename($_filename,$tmppath=''){
 
