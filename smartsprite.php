@@ -307,8 +307,8 @@ function collectSpriteImgRefs($_spriteName,$_str){
 
   $_regEx = '/
     background[-image]*:\s*   # look for `background` property
-    url\((?P<uri1>.*)\)     # grab the image URI
-    (?P<suffix1>\s*.*);\s*  # grab all the rest of styles for that background
+    url\((.*)\)     # grab the image URI in Group #1
+    (\s*.*);\s*  # grab all the rest of styles for that background in Group #2
     \/\*\*\s+       # find SmartSprite syntax starting tag
     sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
                                     # `sprite-ref: sprite_name;`
@@ -319,8 +319,8 @@ function collectSpriteImgRefs($_spriteName,$_str){
                                     # `sprite-ref: sprite_name;`
     \s*\*\/\s*      # find SmartSprite syntax ending tag
     background[-image]*:\s*   # look for `background` property
-    url\((?P<uri2>.*)\)     # grab the image URI
-    (?P<suffix2>\s*.*);        # grab all the rest of styles for that background
+    url\((.*)\)     # grab the image URI in Group #3
+    (\s*.*);        # grab all the rest of styles for that background in Group #4
     /ix';
 
   preg_replace_callback($_regEx, array($this, 'parseSpriteReference'), $_str);
@@ -328,9 +328,8 @@ function collectSpriteImgRefs($_spriteName,$_str){
 }
 
 function parseSpriteReference($matches) {
-  extract($matches);
-  $uri = !empty($uri1) ? $uri1 : $uri2;
-  $suffix = !empty($suffix1) ? $suffix1 : $suffix2;
+  $uri = !empty($matches[1]) ? $matches[1] : @$matches[3];
+  $suffix = !empty($matches[2]) ? $matches[2] : @$matches[4];
   $whole_match = $matches[0];
   $_spritename = $this->_tmp_currently_parsed_sprite;
   $_imagename = trim($uri,'\'\""');
