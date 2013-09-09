@@ -312,11 +312,13 @@ function collectSpriteImgRefs($_spriteName,$_str){
     \/\*\*\s+       # find SmartSprite syntax starting tag
     sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
                                     # `sprite-ref: sprite_name;`
+    [^\/]*          # allow any additional Smartsprite syntax
     \s*\*\/         # find SmartSprite syntax ending tag
     |               # ......OR......
     \/\*\*\s+       # find SmartSprite syntax starting tag
     sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
                                     # `sprite-ref: sprite_name;`
+    [^\/]*          # allow any additional Smartsprite syntax
     \s*\*\/\s*      # find SmartSprite syntax ending tag
     background[-image]*:\s*   # look for `background` property
     url\((.*)\)     # grab the image URI in Group #3
@@ -357,18 +359,19 @@ function parseSpriteReference($matches) {
   return '';
 }
 
-function getCssSelectorsOfSpriteRef($_ssRefName) {
+function getCssSelectorsOfSpriteRef($_spritename) {
   $_matches = '';
 
   $_str = $this->input_css;
 
-  $_starttag = '\/\*\*\s+';
-  $_endtag = '\s*\*\/';
-  $_regCSSselector = '([0-9a-z]((.|,|:)[0-9a-z]){0,10})';
-//  $_regExSelector = '/(.*\s*){\s*.*\s*'.$_starttag.'sprite-ref:\s*'.$_ssRefName.'; '.$_endtag.'/i';
-  $_regExSelector = '/(.*\s*){[^}]*?'.$_starttag.'sprite-ref:\s*'.$_ssRefName.'; '.$_endtag.'/i';
-  
-//  \\s*{[^}]*?}
+  $_regExSelector = "/
+    (.*\s*)                       # grab class name
+    {[^}]*                        # match anything excpet curly brace
+    \/\*\*\s+                     # match Smartsprite syntax opening tag
+    sprite-ref:\s* $_spritename;  # match our spritename
+    [^\/]*                        # allow anything further except for closing tag
+    \s*\*\/                       # match closing tag
+    /ix";
   
   preg_match_all($_regExSelector,$_str,$_matches);
   $_selector = $_matches[1];
