@@ -72,6 +72,8 @@ class Smartsprite {
   // containing an array with string global sprite definitions
   $_spriteDefs = array(),
   $sprites = array(),
+  // containing arrays of SmartSprite syntax references per sprite
+  $references = array(),
   // the file prefix for the generated css file
   $_fileprefix = '-sprite.css',
   $_filestrippedprefix = '-sprite-min.css',
@@ -118,6 +120,10 @@ class Smartsprite {
   //   - Image contents (in either PNG, JPEG, etc. format) that is ready to be 
   //     written to a file
   $all_sprites = array();
+
+  // Temporary variable that holds a name of sprite that is being currently 
+  // populated with all references to it found in original CSS
+  private $_tmp_currently_parsed_sprite = '';
 
   function __construct($css = '') {
 
@@ -281,7 +287,11 @@ function parseSpriteProperties(){
       echo "DataURL:\t$_sdataURL\n";
       echo "\n\n";
     }
-    $this->sprites[$_spritename]['images'] = $this->collectSpriteImgRefs($_spritename,$this->input_css);
+    $this->_tmp_currently_parsed_sprite = $_spritename;
+    // empty the references array for this sprite, just in case
+    $this->references[$_spritename] = array();
+    $this->collectSpriteImgRefs($_spritename,$this->input_css);
+    $this->sprites[$_spritename]['images'] = $this->references[$_spritename];
   }
 }
 
@@ -291,43 +301,61 @@ function parseString($_regExe,$_str) {
   return (isset($_matches[1])) ? $_matches[1] : '';
 }
 
-function collectSpriteImgRefs($_ssRefName,$_str){
+function collectSpriteImgRefs($_spriteName,$_str){
   if ($this->verbose)
-  echo "\nParsing Image references for: $_ssRefName: \n\n";
-  $_result = array();
+  echo "\nParsing Image references for: $_spriteName: \n\n";
 
-  $_matches = '';
-  $_starttag = '\/\*\*\s+';
-  $_endtag = '\s*\*\/';
+  $_regEx = '/
+    background[-image]*:\s*   # look for `background` property
+    url\((?P<uri1>.*)\)     # grab the image URI
+    (?P<suffix1>\s*.*);\s*  # grab all the rest of styles for that background
+    \/\*\*\s+       # find SmartSprite syntax starting tag
+    sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
+                                    # `sprite-ref: sprite_name;`
+    \s*\*\/         # find SmartSprite syntax ending tag
+    |               # ......OR......
+    \/\*\*\s+       # find SmartSprite syntax starting tag
+    sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
+                                    # `sprite-ref: sprite_name;`
+    \s*\*\/\s*      # find SmartSprite syntax ending tag
+    background[-image]*:\s*   # look for `background` property
+    url\((?P<uri2>.*)\)     # grab the image URI
+    (?P<suffix2>\s*.*);        # grab all the rest of styles for that background
+    /ix';
 
-  $_regEx = '/background[-image]*:\s*url\((.*)\)(\s*.*);\s*'.$_starttag.'sprite-ref:\s*'.$_ssRefName.';* '.$_endtag.'/i';
-  preg_match_all($_regEx,$_str,$_matches);
-  $_replace_strs = $_matches[0];
-  $_file_locs = $_matches[1];
-  $_suffixes =$_matches[2];
+  preg_replace_callback($_regEx, array($this, 'parseSpriteReference'), $_str);
+  return true;
+}
 
+function parseSpriteReference($matches) {
+  extract($matches);
+  $uri = !empty($uri1) ? $uri1 : $uri2;
+  $suffix = !empty($suffix1) ? $suffix1 : $suffix2;
+  $whole_match = $matches[0];
+  $_spritename = $this->_tmp_currently_parsed_sprite;
+  $_imagename = trim($uri,'\'\""');
 
-  //$_selectors = $this->getCssSelectorsOfSpriteRef($_ssRefName);
-  //die( $_selectors."\n" );
+  if ($this->verbose) echo "Image definition found: $_imagename \n";
+  
+  $data = array(
+    'file_location' => $_imagename,
+    'replace_string' => $whole_match,
+    'urlsuffix' => $suffix,
+    'repeat' => $this->getBGImgRepeat( $suffix ),
+    'align' => $this->getBGImgAlign( $suffix )
+  );
 
-  $i=0;
-  foreach ($_file_locs as $_file_loc => $value) {
-    $value = trim($value,'\'\""');
-    $_imagename = $value;
-    $_result[$_imagename]['file_location'] = $value;
+  // Update instance array
+  if( !is_array($this->references[$_spritename])) $this->references[$_spritename] = array();
+  $this->references[$_spritename][$_imagename] = $data;
 
-    if ($this->verbose) echo "Image definition found: $value \n";
-    
-    $_result[$_imagename]['replace_string'] = $_replace_strs[$i];
-    $_result[$_imagename]['urlsuffix'] = $_suffixes[$i];
-    $_result[$_imagename]['repeat'] = $this->getBGImgRepeat( $_suffixes[$i] );
-    $_result[$_imagename]['align'] = $this->getBGImgAlign( $_suffixes[$i] );
-
-    $i++;
-  }
   if ($this->verbose)
   echo "\n";
-  return $_result;
+
+  // just return empty string for now..
+  // however this may be used with greater profit to replace references in 
+  // CSS.. mention for TODO
+  return '';
 }
 
 function getCssSelectorsOfSpriteRef($_ssRefName) {

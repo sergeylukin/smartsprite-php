@@ -8,8 +8,8 @@
   display:block;
   width: 64px;
   height: 64px; 
-  background-image: url('../images/lighthouse.png');
   /** sprite-ref: mysprite; */
+  background-image: url('../images/lighthouse.png');
 }
 
 .radiotower {
