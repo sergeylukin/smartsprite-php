@@ -560,6 +560,7 @@ function createSpriteImages() {
   $OPTIMIZE = $this->sprites[$spritekey]['optimize'];
   $DATAURL = $this->sprites[$spritekey]['dataurl'];
   
+    if ($this->verbose)
     echo "creating css-sprite-file: $filename \n";
     $backgroundHEX = $this->sprites[$spritekey]['background'];
 
@@ -571,11 +572,13 @@ function createSpriteImages() {
   
   // $this->_trueColor &&  
   if ($this->sprites[$spritekey]['force8bit'] == false ) {
+    if ($this->verbose)
     echo "using truecolor mode\n";
     if ( $fileEXT == 'png')  $image = imagecreatetruecolor($w, $h);
     if ( $fileEXT == 'gif')  $image = imagecreatetruecolor($w, $h);
     if ( $fileEXT == 'jpg')  $image =  imagecreatetruecolor($w, $h);
   } else {
+    if ($this->verbose)
     echo "using 8bit mode\n";
     if ( $fileEXT == 'png')  $image = imagecreate($w, $h);
     if ( $fileEXT == 'gif')  $image = imagecreate($w, $h);
@@ -700,6 +703,7 @@ function loadImageFromFile($imageInfo) {
   }
 
   $_colorCount = ImageColorsTotal($_result);
+  if ($this->verbose)
   echo 'testing imagefile: '.$filelocation.' colors: '.$_colorCount."\n";
 
   if (  $this->_maxColors < $_colorCount ) $this->_maxColors = $_colorCount;
