@@ -310,13 +310,13 @@ function collectSpriteImgRefs($_spriteName,$_str){
     url\((.*)\)     # grab the image URI in Group #1
     (\s*.*);\s*  # grab all the rest of styles for that background in Group #2
     \/\*\*\s+       # find SmartSprite syntax starting tag
-    sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
+    sprite-ref:\s*'.$_spriteName.';+ # find reference to a sprite name, like:
                                     # `sprite-ref: sprite_name;`
     ([^\/]*)        # grab any additional Smartsprite syntax in Group #3
     \s*\*\/         # find SmartSprite syntax ending tag
     |               # ......OR......
     \/\*\*\s+       # find SmartSprite syntax starting tag
-    sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
+    sprite-ref:\s*'.$_spriteName.';+ # find reference to a sprite name, like:
                                     # `sprite-ref: sprite_name;`
     ([^\/]*)        # grab any additional Smartsprite syntax in Group #4
     \s*\*\/\s*      # find SmartSprite syntax ending tag
