@@ -1,4 +1,4 @@
-.lighthouse , .radiotower  {background: url("../images/sprites/mysprite.png") no-repeat;}
+.lighthouse , .radiotower  {background-image: url("../images/sprites/mysprite.png"); background-repeat: no-repeat;}
 
 .lighthouse {
   display:block;

@@ -433,7 +433,7 @@ function replaceBGIMGStrings() {
   echo "Replacing Image References...\n";
   
   foreach($this->sprites as $sprite ) {
-    $sprite_bgurl = 'background: url(\''.$sprite['filename'].'\')';
+    $sprite_bgurl = 'background-image: url(\''.$sprite['filename'].'\')';
     $_imagelocations = $sprite['images'];
      if ($_imagelocations) {
     foreach( $_imagelocations as $_imglocation => $_imglocationvalue) {
@@ -787,8 +787,8 @@ function getImageDataURL($image, $filepath, $_mime, $spritekey) {
   //$_fileNoExt = str_replace('.'.$_fileExt,'',basename( $file ) );
   $_data = base64_encode($image);
   $_selectors = $this->sprites[$spritekey]['cssselectors'];
-  $_IEHack = "\n".'*background: url("'.$filepath.'") no-repeat;'."\n";
-  return $_selectors.'{background: url("data:'.$_mime.';base64,'.$_data .'") no-repeat; '.$_IEHack.'}' ;
+  $_IEHack = "\n".'*background-image: url("'.$filepath.'");*background-repeat: no-repeat;'."\n";
+  return $_selectors.'{background-image: url("data:'.$_mime.';base64,'.$_data .'"); background-repeat: no-repeat; '.$_IEHack.'}' ;
 }
 // creates a joint css-rule for all matching css-rules with the same
 // background-sprite
@@ -796,7 +796,7 @@ function getImageJointBG($file, $spritekey) {
   //$_fileExt = end(explode(".", basename($file) ));
   //$_fileNoExt = str_replace('.'.$_fileExt,'', basename($file) );
   $_selectors = $this->sprites[$spritekey]['cssselectors'];
-  return $_selectors.' {background: url("'.$file.'") no-repeat;}' ;
+  return $_selectors.' {background-image: url("'.$file.'"); background-repeat: no-repeat;}' ;
 }
 
 } // class tsmartsprite
