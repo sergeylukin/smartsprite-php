@@ -8,6 +8,8 @@ It's not official repo in any way, but my personal fork which is redistributed
 under original license conditions so please consider this when using the code
 in any way.
 
+Tested on PHP `5.4.0` and `5.1.6`
+
 Using Example
 -------------
 
