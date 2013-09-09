@@ -312,17 +312,17 @@ function collectSpriteImgRefs($_spriteName,$_str){
     \/\*\*\s+       # find SmartSprite syntax starting tag
     sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
                                     # `sprite-ref: sprite_name;`
-    [^\/]*          # allow any additional Smartsprite syntax
+    ([^\/]*)        # grab any additional Smartsprite syntax in Group #3
     \s*\*\/         # find SmartSprite syntax ending tag
     |               # ......OR......
     \/\*\*\s+       # find SmartSprite syntax starting tag
     sprite-ref:\s*'.$_spriteName.';* # find reference to a sprite name, like:
                                     # `sprite-ref: sprite_name;`
-    [^\/]*          # allow any additional Smartsprite syntax
+    ([^\/]*)        # grab any additional Smartsprite syntax in Group #4
     \s*\*\/\s*      # find SmartSprite syntax ending tag
     background[-image]*:\s*   # look for `background` property
-    url\((.*)\)     # grab the image URI in Group #3
-    (\s*.*);        # grab all the rest of styles for that background in Group #4
+    url\((.*)\)     # grab the image URI in Group #5
+    (\s*.*);        # grab all the rest of styles for that background in Group #6
     /ix';
 
   preg_replace_callback($_regEx, array($this, 'parseSpriteReference'), $_str);
@@ -330,8 +330,9 @@ function collectSpriteImgRefs($_spriteName,$_str){
 }
 
 function parseSpriteReference($matches) {
-  $uri = !empty($matches[1]) ? $matches[1] : @$matches[3];
-  $suffix = !empty($matches[2]) ? $matches[2] : @$matches[4];
+  $uri = !empty($matches[1]) ? $matches[1] : @$matches[5];
+  $background_properties = !empty($matches[2]) ? $matches[2] : @$matches[6];
+  $smartsprite_syntax = !empty($matches[3]) ? $matches[3] : @$matches[4];
   $whole_match = $matches[0];
   $_spritename = $this->_tmp_currently_parsed_sprite;
   $_imagename = trim($uri,'\'\""');
@@ -341,9 +342,10 @@ function parseSpriteReference($matches) {
   $data = array(
     'file_location' => $_imagename,
     'replace_string' => $whole_match,
-    'urlsuffix' => $suffix,
-    'repeat' => $this->getBGImgRepeat( $suffix ),
-    'align' => $this->getBGImgAlign( $suffix )
+    'urlsuffix' => $background_properties,
+    'repeat' => $this->getBGImgRepeat( $background_properties ),
+    'align' => $this->getBGImgAlign( $background_properties ),
+    'position'  => $this->getSpriteImgPosition( $smartsprite_syntax )
   );
 
   // Update instance array
@@ -404,6 +406,33 @@ function getBGImgAlign($str){
   return $_result;
 }
 
+function getSpriteImgPosition($str){
+  $_result = array(
+    'horizontal'  => 'auto',
+    'vertical'    => 'auto'
+  );
+
+  $_regex = "/
+    \s*sprite-pos:\s* # match `sprite-pos` property
+    ([^;]*)\s*;?      # grab everything untill semicolon or the end of string
+    /x";
+  preg_match($_regex, $str, $matches);
+
+  if( !empty($matches) ) {
+    // Extract the values and do our best to detect horizontal and vertical
+    // values
+    $pos = explode(' ', trim($matches[1]));
+    // First value is always Horizontal
+    $_result['horizontal'] = $pos[0];
+    // If there are more than 1 values than Vertical is also specified - simple
+    if( count($pos) > 1 ) {
+      $_result['vertical'] = $pos[1];
+    }
+  }
+
+  return $_result;
+}
+
 function collectImageInfos(){
   foreach($this->sprites as $spritekey => $spriteval ) {
     $imgdefs = &$spriteval['images'];
@@ -439,27 +468,27 @@ function replaceBGIMGStrings() {
     $_imagelocations = $sprite['images'];
      if ($_imagelocations) {
     foreach( $_imagelocations as $_imglocation => $_imglocationvalue) {
-      $top  = $_imglocationvalue['spritepos_top'];
-      $left = $_imglocationvalue['spritepos_left'];
-      $suffix = $_imglocationvalue['urlsuffix'].';';
-      $strLeft = ($left > 0 ) ? '-'.$left.'px' : '0';
-      $strTop = ($top > 0 ) ? '-'.$top.'px' : '0';
-      switch ($_imglocationvalue['align']) {
-        
-        case 'left':  
-            $_imglocationvalue['spritepos_left']=0;
-            $_bgpostr = 'background-position: '.$strLeft.' -'.$strTop.';';
-            break;
-        case 'right':
-            $_bgpostr='background-position: right '.$strTop.';';
-            break;
-        case 'center': 
-            $_bgpostr='background-position: center '.$strTop.';';
-            break;
-        default:
-            $_bgpostr = 'background-position: '.$strLeft.' '.$strTop.';';
-            break;
+
+      // Load calculated sprite background position
+      $left = -$_imglocationvalue['spritepos_left'];
+      $top  = -$_imglocationvalue['spritepos_top'];
+
+      // Apply user specified position for sprite background position
+      $horizontal_pos = $_imglocationvalue['position']['horizontal'];
+      if( $horizontal_pos !== 'auto' ) {
+        if( preg_match('/^[+-]/', $horizontal_pos) ) $left = $left + $horizontal_pos;
+        else $left = $horizontal_pos;
       }
+      $vertical_pos = $_imglocationvalue['position']['vertical'];
+      if( $vertical_pos !== 'auto' ) {
+        if( preg_match('/^[+-]/', $vertical_pos) ) $top = $top + $vertical_pos;
+        else $top = $vertical_pos;
+      }
+
+      $suffix = $_imglocationvalue['urlsuffix'].';';
+      $strLeft = $left . ( is_numeric($left) && $left !== 0 ? 'px' : '');
+      $strTop = $top . ( is_numeric($top) && $top !== 0 ? 'px' : '');
+      $_bgpostr = 'background-position: '.$strLeft.' '.$strTop.';';
  
        if ($_imglocationvalue['repeat'] && $_imglocationvalue['repeat'] != 'no-repeat') {
          $_bgpostr .= 'background-repeat: '.$_imglocationvalue['repeat'].';';

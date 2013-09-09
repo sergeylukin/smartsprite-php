@@ -8,7 +8,7 @@
   display:block;
   width: 64px;
   height: 64px; 
-  /** sprite-ref: mysprite; */
+  /** sprite-ref: mysprite; sprite-pos: +15 */
   background-image: url('../images/lighthouse.png');
 }
 
