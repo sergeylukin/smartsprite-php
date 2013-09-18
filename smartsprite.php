@@ -682,9 +682,10 @@ function createSpriteImages() {
       } // image loop
 
       $imgtype = $this->sprites[$spritekey]['imagetype'];
-      $filename = $this->sprites[$spritekey]['filename'];
-      $filepath = $this->spritesBasePath . DIRECTORY_SEPARATOR . $filename;
       $sprite = $this->returnImage($image, $imgtype);
+      $token = substr(hash('md5', $sprite['image']), 0, 7);
+      $filename = "$token.{$this->sprites[$spritekey]['filename']}";
+      $filepath = $this->spritesBasePath . DIRECTORY_SEPARATOR . $filename;
 
       // Add sprite to the array of sprites
       array_push($this->all_sprites, array(
