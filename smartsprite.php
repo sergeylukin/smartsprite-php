@@ -690,6 +690,8 @@ function createSpriteImages() {
       // Add sprite to the array of sprites
       array_push($this->all_sprites, array(
         'filename'  => $filename,
+        'token'     => $token,
+        'alias'     => $spritekey,
         'image'     => $sprite['image']
       ));
       // Replace BG reference in Output CSS
