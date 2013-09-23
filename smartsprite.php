@@ -439,14 +439,19 @@ function collectImageInfos(){
     foreach( $imgdefs as $spriteimagekey => $spriteimagevalue ){
       if ($this->verbose)
       echo "Fetching Image-File Properties for file : $spriteimagekey\t";
+      $path_prefix = '';
       if( substr($spriteimagekey, 0, 3) === '../' ) {
         $path_prefix = $this->relativePathRoot;
-      } else {
+      } elseif( substr($spriteimagekey, 0, 1) === '/' ) {
         $path_prefix = $this->absolutePathRoot;
       }
-      $fullfilename = realpath($path_prefix . DIRECTORY_SEPARATOR . $spriteimagekey);
+      if( !empty($path_prefix) ) {
+        $fullfilename = realpath($path_prefix . DIRECTORY_SEPARATOR . $spriteimagekey);
+      } else {
+        $fullfilename = $spriteimagekey;
+      }
 //      die($fullfilename);
-      if (file_exists($fullfilename) ) {
+      if (file_exists($fullfilename) || empty($path_prefix) ) {
         list($width, $height, $type) = getimagesize($fullfilename );
         $this->sprites[$spritekey]['images'][$spriteimagekey]['width'] = $width;
         $this->sprites[$spritekey]['images'][$spriteimagekey]['height'] = $height;
@@ -715,12 +720,15 @@ function getFileExtToImgType($_fileName) {
 function loadImageFromFile($imageInfo) {
   $_result = 0;
   $filelocation = $imageInfo['file_location'];
+  $path_prefix = '';
   if( substr($filelocation, 0, 3) === '../' ) {
     $path_prefix = $this->relativePathRoot;
-  } else {
+  } elseif( substr($filelocation, 0, 1) === '/' ) {
     $path_prefix = $this->absolutePathRoot;
   }
-  $filelocation = realpath($path_prefix . DIRECTORY_SEPARATOR . $filelocation);
+  if( !empty($path_prefix) ) {
+    $filelocation = realpath($path_prefix . DIRECTORY_SEPARATOR . $filelocation);
+  }
 
   switch ($imageInfo['type']) {
     case 1 : $_result = @imagecreatefromgif($filelocation);
