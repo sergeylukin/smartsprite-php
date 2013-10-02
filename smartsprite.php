@@ -833,7 +833,13 @@ function getImageDataURL($image, $filepath, $_mime, $spritekey) {
   //$_fileNoExt = str_replace('.'.$_fileExt,'',basename( $file ) );
   $_data = base64_encode($image);
   $_selectors = $this->sprites[$spritekey]['cssselectors'];
-  $_IEHack = "\n".'*background-image: url("'.$filepath.'");*background-repeat: no-repeat;'."\n";
+  $_IEHack = "\n";
+  // Add IE8 fallback if data uri content is greater than 31 KB
+  if( strlen($_data) > 31 * 1024 ) {
+    $_IEHack .= 'background-image: url("'.$filepath.'")\9;';
+  }
+  $_IEHack .= '*background-image: url("'.$filepath.'");*background-repeat: no-repeat;'."\n";
+
   return $_selectors.'{background-image: url("data:'.$_mime.';base64,'.$_data .'"); background-repeat: no-repeat; '.$_IEHack.'}' ;
 }
 // creates a joint css-rule for all matching css-rules with the same
